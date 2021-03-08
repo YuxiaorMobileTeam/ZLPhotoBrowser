@@ -53,6 +53,8 @@ class ZLThumbnailViewController: UIViewController {
     
     var collectionView: UICollectionView!
     
+    var tipsView: SettingTipsView?
+    
     var bottomView: UIView!
     
     var bottomBlurView: UIVisualEffectView?
@@ -225,6 +227,10 @@ class ZLThumbnailViewController: UIViewController {
         }
         let bottomViewH = showBottomView ? ZLLayout.bottomToolViewH : 0
         
+        if tipsView != nil {
+            self.tipsView?.frame = CGRect(x: 0, y: self.view.frame.height-insets.bottom-bottomViewH - 70.0, width: self.view.bounds.width, height: 70.0)
+        }
+        
         let totalWidth = self.view.frame.width - insets.left - insets.right
         self.collectionView.frame = CGRect(x: insets.left, y: 0, width: totalWidth, height: self.view.frame.height)
         self.collectionView.contentInset = UIEdgeInsets(top: collectionViewInsetTop, left: 0, bottom: bottomViewH, right: 0)
@@ -285,6 +291,12 @@ class ZLThumbnailViewController: UIViewController {
         self.bottomView = UIView()
         self.bottomView.backgroundColor = .bottomToolViewBgColor
         self.view.addSubview(self.bottomView)
+        
+        if #available(iOS 14.0, *), PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited, ZLPhotoConfiguration.default().showEnterSettingFooter, self.albumList.isCameraRoll {
+            let tips = SettingTipsView(frame: CGRect(x: 0, y: 0, width: view.bounds.size.width, height: 70.0))
+            self.tipsView = tips
+            view.addSubview(tips)
+        }
         
         if let effect = ZLPhotoConfiguration.default().bottomToolViewBlurEffect {
             self.bottomBlurView = UIVisualEffectView(effect: effect)
@@ -874,11 +886,12 @@ extension ZLThumbnailViewController: UICollectionViewDataSource, UICollectionVie
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForFooterInSection section: Int) -> CGSize {
-        if #available(iOS 14.0, *), PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited, ZLPhotoConfiguration.default().showEnterSettingFooter, self.albumList.isCameraRoll {
-            return CGSize(width: collectionView.bounds.width, height: 50)
-        } else {
-            return .zero
-        }
+//        if #available(iOS 14.0, *), PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited, ZLPhotoConfiguration.default().showEnterSettingFooter, self.albumList.isCameraRoll {
+//            return CGSize(width: collectionView.bounds.width, height: 50)
+//        } else {
+//            return .zero
+//        }
+        return .zero
     }
     
     func collectionView(_ collectionView: UICollectionView, viewForSupplementaryElementOfKind kind: String, at indexPath: IndexPath) -> UICollectionReusableView {
@@ -1445,6 +1458,59 @@ class ZLThumbnailColViewFooter: UICollectionReusableView {
     
     @objc func selectMorePhoto() {
         self.selectMoreBlock?()
+    }
+    
+}
+
+
+class SettingTipsView: UIView {
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        backgroundColor = .thumbnailBgColor
+        
+        let bgView = UIView()
+        bgView.layer.cornerRadius = 10.0
+        bgView.backgroundColor = .cameraCellBgColor
+        bgView.frame = CGRect(x: 10, y: 0, width: frame.width - 20, height: frame.height - 20)
+        addSubview(bgView)
+        
+        let imageView = UIImageView(image: getImage("tips_fail"))
+        imageView.frame = CGRect(x: 10, y: 0, width: 16, height: 16)
+        bgView.addSubview(imageView)
+        
+        let textLabel = UILabel()
+        textLabel.frame = CGRect(x: 36, y: 0, width: frame.width - 100 - 40, height: 40)
+        textLabel.text = "无法访问相册中所有图片，\n请允许访问 ⌜照片⌟ 中的 ⌜所有图片⌟"
+        textLabel.font = getFont(14)
+        textLabel.numberOfLines = 2
+        textLabel.textColor = .selectMorePhotoWhenAuthIsLismitedTitleColor
+        bgView.addSubview(textLabel)
+        
+        let button = UIButton(type: .system)
+        button.frame = CGRect(x: frame.width - 100, y: 0, width: 90, height: 30)
+        button.setTitle("去设置", for: .normal)
+        button.setTitleColor(zlRGB(230, 135, 20), for: .normal)
+        button.addTarget(self, action: #selector(touchSetting), for: .touchUpInside)
+        bgView.addSubview(button)
+        
+        imageView.center = CGPoint(x: imageView.center.x, y: bgView.center.y)
+        textLabel.center = CGPoint(x: textLabel.center.x, y: bgView.center.y)
+        button.center = CGPoint(x: button.center.x, y: bgView.center.y)
+    }
+    
+    @objc func touchSetting(){
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
 }
